@@ -1,7 +1,7 @@
-const { loadEnv } = require('./lib/load-env');
+const { loadEnv } = require('../lib/load-env');
 loadEnv();
 
-const { createPost } = require('./lib/buffer-client');
+const { createPost } = require('../lib/buffer-client');
 
 const CHANNEL_ID = '6a7d0aceb2d9d5774368eaaa'; // indirimulkesi (Instagram)
 const TEST_IMAGE_URL = 'https://picsum.photos/1080/1080';

@@ -1,7 +1,7 @@
-const { loadEnv } = require('./lib/load-env');
+const { loadEnv } = require('../lib/load-env');
 loadEnv();
 
-const { getOrganizations, getChannels } = require('./lib/buffer-client');
+const { getOrganizations, getChannels } = require('../lib/buffer-client');
 
 async function main() {
   const apiKey = process.env.BUFFER_API_KEY;
