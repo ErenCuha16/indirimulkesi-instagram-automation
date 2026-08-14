@@ -10,9 +10,6 @@ on:
 jobs:
   post-deal:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: instagram-automation
     steps:
       - uses: actions/checkout@v4
 
