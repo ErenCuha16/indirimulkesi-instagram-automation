@@ -9,7 +9,6 @@ const { createPost } = require('./lib/buffer-client');
 const postedLog = require('./lib/posted-log');
 
 const CHANNEL_ID = '6a7d0aceb2d9d5774368eaaa'; // indirimulkesi (Instagram)
-const LOG_PATH = path.join(__dirname, 'posted-log.json');
 const TMP_SCRAPE_FILE = path.join(__dirname, '.firecrawl-tmp', 'search.md');
 const IMAGE_PATH = path.join(__dirname, 'output', 'deal-post.png');
 const MAX_CATEGORY_ATTEMPTS = CATEGORY_QUERIES.length;
@@ -24,10 +23,10 @@ function parseTLPrice(str) {
   return Number.isFinite(num) ? num : null;
 }
 
-function scoreAndPick(products) {
+function scoreAndPick(products, postedUrls) {
   const scored = products
     .filter((p) => p && p.productUrl && p.imageUrl && p.name)
-    .filter((p) => !postedLog.has(LOG_PATH, p.productUrl))
+    .filter((p) => !postedUrls.has(p.productUrl))
     .map((p) => {
       const now = parseTLPrice(p.priceNow);
       const was = parseTLPrice(p.priceWas);
@@ -64,12 +63,19 @@ async function main() {
     process.exit(1);
   }
 
+  const cloudinaryConfig = { cloudName, apiKey: cloudinaryApiKey, apiSecret: cloudinaryApiSecret };
+
+  console.log('Daha önce paylaşılan ürünler listesi (Cloudinary) okunuyor...');
+  const postedEntries = await postedLog.load(cloudinaryConfig);
+  const postedUrls = new Set(postedEntries.map((e) => e.productUrl));
+  console.log(`${postedUrls.size} ürün daha önce paylaşılmış, bunlar elenecek.`);
+
   let chosen = null;
   for (let attempt = 0; attempt < MAX_CATEGORY_ATTEMPTS && !chosen; attempt++) {
     console.log(`Deneme ${attempt + 1}: Trendyol'da indirim taranıyor...`);
     const { query, products } = await findDiscountedProducts({ tmpFile: TMP_SCRAPE_FILE });
     console.log(`"${query}" için ${products.length} indirimli ürün bulundu.`);
-    chosen = scoreAndPick(products);
+    chosen = scoreAndPick(products, postedUrls);
   }
 
   if (!chosen) {
@@ -90,11 +96,7 @@ async function main() {
   });
   console.log('Görsel oluşturuldu:', imagePath);
 
-  const uploadResult = await uploadImage(imagePath, {
-    cloudName,
-    apiKey: cloudinaryApiKey,
-    apiSecret: cloudinaryApiSecret,
-  });
+  const uploadResult = await uploadImage(imagePath, cloudinaryConfig);
   console.log('Cloudinary\'e yüklendi:', uploadResult.secure_url);
 
   const result = await createPost(bufferApiKey, {
@@ -110,7 +112,8 @@ async function main() {
   }
 
   console.log('Instagram\'da paylaşıldı:', result.post);
-  postedLog.append(LOG_PATH, chosen.productUrl);
+  await postedLog.append(cloudinaryConfig, chosen.productUrl);
+  console.log('Paylaşım kaydı Cloudinary\'e güncellendi.');
 }
 
 main().catch((err) => {
