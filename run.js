@@ -73,13 +73,19 @@ async function main() {
   let chosen = null;
   for (let attempt = 0; attempt < MAX_CATEGORY_ATTEMPTS && !chosen; attempt++) {
     console.log(`Deneme ${attempt + 1}: Trendyol'da indirim taranıyor...`);
-    const { query, products } = await findDiscountedProducts({ tmpFile: TMP_SCRAPE_FILE });
+    let query, products;
+    try {
+      ({ query, products } = await findDiscountedProducts({ tmpFile: TMP_SCRAPE_FILE }));
+    } catch (err) {
+      console.error(`Deneme ${attempt + 1} başarısız oldu, sonraki kategoriye geçiliyor: ${err.message}`);
+      continue;
+    }
     console.log(`"${query}" için ${products.length} indirimli ürün bulundu.`);
     chosen = scoreAndPick(products, postedUrls);
   }
 
   if (!chosen) {
-    console.log('Paylaşılabilecek yeni bir indirim bulunamadı (hepsi daha önce paylaşılmış olabilir). Bu çalıştırma atlanıyor.');
+    console.log('Paylaşılabilecek yeni bir indirim bulunamadı (hepsi daha önce paylaşılmış olabilir ya da tüm denemeler hata verdi). Bu çalıştırma atlanıyor.');
     return;
   }
 
